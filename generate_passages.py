@@ -76,7 +76,6 @@ class Book:
 
         book_char_rels = defaultdict(list)
         book_chars = set()
-        print(char_rels)
 
         for relation in char_rels:
             char1 = relation[4] 
@@ -94,7 +93,6 @@ class Book:
         char1, rel, char2 = self.get_rel_from_index(rel_index)
         
         matches = []
-        print(char1,char2,rel)
         for i, sent in enumerate(self.sents):
             if loose_match(sent, char1):
                 matches.append((i, char1))
@@ -115,11 +113,11 @@ class Book:
                 output += f"{i}.{j}: {char1} --> {r[0]} --> {r[1]}\n"
                 j+=1
             i+=1
+        print(output)
 
 
     def get_rel_from_index(self, rel_index: str="0.0"):
         """"""
-        print(list(self.character_relations))
         char1 = list(self.character_relations)[int(rel_index[0])]
         rel = self.character_relations[char1][int(rel_index[-1])][0]
         char2 = self.character_relations[char1][int(rel_index[-1])][1]
@@ -146,11 +144,8 @@ class Book:
 def main():
     book1 = Book("The American", "177-0.txt")
     print(book1)
-    # print(book1.character_relations)s
     book1.present_relations()
-    # print(book1.get_rel_from_index(5))
-    # print(book1.characters)
-    gen = book1.passage_generator("1.1")
+    gen = book1.passage_generator("2.0")
     print(book1.get_passage(next(gen)))
     
 if __name__ == "__main__":
