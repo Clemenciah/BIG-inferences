@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 import nltk
 import os
 from difflib import SequenceMatcher
@@ -55,7 +56,7 @@ class Book:
         self.text = ""
         self.sents = []
         self.characters = set()
-        self.character_relations = dict()
+        self.character_relations = defaultdict()
         
         with open("data/books/" + filename) as f:            
             self.text = f.read()
@@ -73,15 +74,15 @@ class Book:
         char_rels = char_rels[np.where(char_rels[:,2] == self.title)]
         assert char_rels.size != 0, "Book not available or you made a typo, no relations found."
 
-        book_char_rels = dict()
+        book_char_rels = defaultdict(list)
         book_chars = set()
-
+        print(char_rels)
 
         for relation in char_rels:
             char1 = relation[4] 
             char2 = relation[5]
             book_chars.update(set([char1, char2]))
-            book_char_rels[char1] = [relation[8], char2]
+            book_char_rels[char1].append([relation[8], char2])
 
         self.characters = book_chars
         self.character_relations = book_char_rels 
@@ -93,7 +94,7 @@ class Book:
         char1, rel, char2 = self.get_rel_from_index(rel_index)
         
         matches = []
-
+        print(char1,char2,rel)
         for i, sent in enumerate(self.sents):
             if loose_match(sent, char1):
                 matches.append((i, char1))
@@ -109,16 +110,19 @@ class Book:
         output = ""
         i = 0
         for char1, rel in self.character_relations.items():
-            output += f"{i}: {char1} --> {rel[0]} --> {rel[1]}\n"
+            j=0
+            for r in rel:
+                output += f"{i}.{j}: {char1} --> {r[0]} --> {r[1]}\n"
+                j+=1
             i+=1
-        print(output)
 
 
-    def get_rel_from_index(self, rel_index: int=0):
+    def get_rel_from_index(self, rel_index: str="0.0"):
         """"""
-        char1 = list(self.character_relations)[rel_index]
-        rel = self.character_relations[char1][0]
-        char2 = self.character_relations[char1][1]
+        print(list(self.character_relations))
+        char1 = list(self.character_relations)[int(rel_index[0])]
+        rel = self.character_relations[char1][int(rel_index[-1])][0]
+        char2 = self.character_relations[char1][int(rel_index[-1])][1]
         return char1, rel, char2
 
 
@@ -142,11 +146,11 @@ class Book:
 def main():
     book1 = Book("The American", "177-0.txt")
     print(book1)
-    print(book1.character_relations)
+    # print(book1.character_relations)s
     book1.present_relations()
-    print(book1.get_rel_from_index(5))
-    print(book1.characters)
-    gen = book1.passage_generator(1)
+    # print(book1.get_rel_from_index(5))
+    # print(book1.characters)
+    gen = book1.passage_generator("1.1")
     print(book1.get_passage(next(gen)))
     
 if __name__ == "__main__":
