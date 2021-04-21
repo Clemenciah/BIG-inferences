@@ -32,7 +32,19 @@ def loose_match(sentence: str, name: str):
         return True
     if name.split(" ")[1] in sentence:
         return True
+
+def loose_match2(sentence: str, name: str):
+    """"""
+    if name in sentence:
+        start = (sentence.find(name))
+        return (start, start + len(name))
+    for sub_name in name.split(" "):
+        if len(sub_name) > 3 and sub_name in sentence:
+            start = sentence.find(sub_name)
+            return (start, start + len(sub_name))
         
+
+       
 
 def find_next(char1, char2, matches, current):
     """"""
@@ -45,6 +57,10 @@ def find_next(char1, char2, matches, current):
             return match
         i+=1
     return ""
+
+def mark_match(sentence: str, idx: tuple, bcolor="\x1b[5;30;42m"):
+    marked_string = bcolor + sentence[idx[0]:idx[1]] + "\x1b[0m"
+    return sentence[:idx[0]] + marked_string + sentence[idx[1]:]
 
 class Book:
     """"""
@@ -62,7 +78,6 @@ class Book:
             self.text = f.read()
 
         self.sents = nltk.tokenize.sent_tokenize(self.text)
-
         
         self.build_relation_set()
 
@@ -87,18 +102,20 @@ class Book:
         self.character_relations = book_char_rels 
 
 
-
     def passage_generator(self, rel_index: int=0, padding: int=5):
         """"""
         char1, rel, char2 = self.get_rel_from_index(rel_index)
         
         matches = []
         for i, sent in enumerate(self.sents):
-            if loose_match(sent, char1):
+            res_1 = loose_match2(sent, char1)
+            res_2 = loose_match2(sent, char2)
+            if res_1 is not None:
                 matches.append((i, char1))
-            if loose_match(sent, char2):
+                self.sents[i] = mark_match(self.sents[i], res_1)
+            if res_2 is not None:
                 matches.append((i, char2))
-
+                self.sents[i] = mark_match(self.sents[i], res_2, bcolor="\x1b[5;30;41m")
         generator = ((match[0]-padding, find_next(char1, char2, matches, match)[0]+padding) for match in matches[:-1])
         return generator
 
@@ -137,8 +154,6 @@ class Book:
     def __repr__(self):
         """"""
         return f"Title: {self.title}, Filename: {self.filename}"
-
-        
 
 
 def main():
