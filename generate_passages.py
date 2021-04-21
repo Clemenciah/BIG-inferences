@@ -34,7 +34,7 @@ def loose_match(sentence: str, name: str):
         return True
         
 
-def find_next(char1, char2, matches, current):
+def find_next(char1: str, char2: str, matches: list, current: tuple):
     """"""
     i = next(i for i, t in enumerate(matches) if t[0] == current[0] and t[1] == current[1])
     print(f"{i+1} of {len(matches)}")
