@@ -50,8 +50,6 @@ def smarter_match(sentence: str, name: str, s_titles: list):
         if re.search(regex, sentence):
             return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
 
-        last_name = name_list[1:-1]
-
         for i in range(len(name_list)):
             for title in s_titles:
                 regex = f"{title} {' '.join(name_list[-(i+1):])}"
@@ -136,7 +134,7 @@ class Book:
     def build_relation_set(self):
         """Generates an uniquely keyed list of all relations in the specific book. 
         Returns nothing, sets attributes."""
-        char_rels = np.loadtxt("data/character_relation_annotations.txt",dtype='str', delimiter='\t')
+        char_rels = np.loadtxt("data/character_relation_annotations.txt", dtype='str', delimiter='\t')
         # 0:annotator	1:change	2:title	3:author	4:character_1	5:character_2	6:affinity	7:coarse_category	8:fine_category	9:detail
         char_rels = char_rels[np.where(char_rels[:,2] == self.title)]
         assert char_rels.size != 0, "Book not available or you made a typo, no relations found."
@@ -177,7 +175,6 @@ class Book:
         return ((report(matches, i), matches[i+1]) for i in range(len(matches)-1))
 
 
-
     def present_relations(self):
         """Prints all relations in the current book with their unique keys."""
         output = ""
@@ -202,12 +199,10 @@ class Book:
     def get_passage(self, matches: tuple):
         """Given a range of sentence numbers appends all of the specific sentences.
         returns the appended sentences"""
-        
         match1 = matches[0] 
         match2 = matches[1]
 
         total_sents = len(self.sents)
-
 
         start_index = match1[0] - self.padding if match1[0] - self.padding >= 0 else 0
         end_index = match2[0] + self.padding if match2[0] + self.padding < total_sents else total_sents
@@ -217,7 +212,8 @@ class Book:
         idx1 = self.padding if match1[0] >= self.padding else 0
         idx2 = -(self.padding) if match2[0] + self.padding <= total_sents else -1
 
-        # Edge case both matches in same sentence. Find first match, join sentences after first match.
+        # Edge case both matches in same sentence. Find first match, join sentences after first match. 
+        # TODO: order of matches
         if sentences[idx1] == sentences[idx2]:
             i =  match1[2].find("MATCH_START")
             s1 = color_names(match1[2], "MAGENTA")
