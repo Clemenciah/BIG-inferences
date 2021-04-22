@@ -108,6 +108,10 @@ def report(matches, i):
     return matches[i]
 
 
+def mark_match(sentence: str, idx: tuple, bcolor="\x1b[5;30;42m"):
+    marked_string = bcolor + sentence[idx[0]:idx[1]] + "\x1b[0m"
+    return sentence[:idx[0]] + marked_string + sentence[idx[1]:]
+
 class Book:
     """"""
     def __init__(self, title: str, filename: str, padding: int=5,):
@@ -125,7 +129,6 @@ class Book:
             self.text = f.read()
 
         self.sents = nltk.tokenize.sent_tokenize(self.text)
-
         
         self.build_relation_set()
 
@@ -230,8 +233,6 @@ class Book:
     def __repr__(self):
         """"""
         return f"Title: {self.title}, Filename: {self.filename}"
-
-        
 
 
 def main():
