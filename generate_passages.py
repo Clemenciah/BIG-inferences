@@ -1,57 +1,120 @@
 import numpy as np
 from collections import defaultdict
 import nltk
+from typing import Callable
+import gender_guesser.detector as gender
+import re
 import os
+from colorama import Fore, Style
 from difflib import SequenceMatcher
 
-titles = ["mr.", "mrs.", "dr.", "drs.", "jr.", "prof."]
+# male, female and androgynous list of titles. 
+titles = {
+    "male": ["Mr.", "Dr.", "Drs.", "Jr.", "prof."],
+    "female": ["Ms.", "Miss", "Mrs.", "Dr.", "Drs.", "Jr.", "prof."],
+    "andy": ["Mr.", "Ms.", "Miss", "Mrs.", "Dr.", "Drs.", "Jr.", "prof."]
+}
 
-def match(sentence: str, name: str, threshold: float=0.8, remove_titles: bool=True) -> bool:
-    """Searches for the occurancy of a (partial) name in a sentence.
-    Returns True if best match has a ratio >= threshold. 
+def get_titles_from_name(name: str):
+    """Find the likely list if titles associated with the (possible) first name.
+    returns list of titles"""
+    d = gender.Detector()
+    first_name = name.split(' ')[0]
+    p_gender = d.get_gender(first_name)
+
+    if first_name == 'Mr.':
+        return titles["male"]
+
+    if first_name in ["Ms.", "Miss", "Mrs."]:
+        return titles["female"]
+
+    if p_gender in ["male", "female"]:
+        return titles[p_gender]
+    return titles["andy"]
+
+
+def smarter_match(sentence: str, name: str, s_titles: list):
+    """Searches for the occurance of a name in a given sentence. 
+    Attempts to create formal names out of (gender specific) titles.
+    Also adds anchors to the original sentence for color coding.
+    Returns bool: True if name in sentence, False otherwise.
+            string: anchored string
     """
-    # Preprocess name and sentence.
-    name, sentence = name.lower(), sentence.lower()
-    for title in titles:
-        name = name.replace(title, "")
-    names = name.split(" ")
-    sentence_tokens = sentence.split(" ")
+    name = re.sub(" \(.*", '', name)
+    name_list = name.split(' ')
 
-    for name in names:
-        for token in sentence_tokens:
-            score = SequenceMatcher(None, name, token).ratio()
-            if score >= threshold:
-                return True
-    return False
+    if name_list[0] not in s_titles + ["The"]:
+        first_name = name_list[0]
+        regex = f"{first_name}"
 
-def loose_match(sentence: str, name: str):
-    """"""
-    if name in sentence:
-        return True
-    if name.split(" ")[0] in sentence:
-        return True
-    if name.split(" ")[1] in sentence:
-        return True
-        
+        if re.search(regex, sentence):
+            return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
 
-def find_next(char1: str, char2: str, matches: list, current: tuple):
-    """"""
-    i = next(i for i, t in enumerate(matches) if t[0] == current[0] and t[1] == current[1])
-    print(f"{i+1} of {len(matches)}")
-    other_char = (char2 if current[1] == char1 else char1)
-    for match in matches[i:]:
-        if match[1] == other_char:
-            print(f"From {current[0]} to {match[0]}")
-            return match
-        i+=1
-    return ""
+        last_name = name_list[1:-1]
+
+        for i in range(len(name_list)):
+            for title in s_titles:
+                regex = f"{title} {' '.join(name_list[-(i+1):])}"
+                if re.search(regex, sentence):
+                    return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
+    else: 
+        for i in range(len(name_list)):
+            regex = f"{' '.join(name_list[-(i+1):])}"
+            if re.search(regex, sentence):
+                return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
+
+    return False, ""
+
+
+def clean_matches(matches: list):
+    """Cleans a list of tuples (sentence_nr, name) so the names are always alternating.
+    returns cleaned list."""
+    current_name = ""
+    cleaned_list = []
+    for sent_name_tuple in matches:
+        if current_name == sent_name_tuple[1]:
+            continue
+        current_name = sent_name_tuple[1]
+        cleaned_list.append(sent_name_tuple)
+    return cleaned_list
+
+
+def color_names(sentence: str, color: str="MAGENTA"):
+    """Replaces the anchor in a sentence with the specific values needed to color the name with {color}.
+    returns the colored string
+    """
+    if color == "MAGENTA":
+        sentence = re.sub("MATCH_START", f"{Fore.MAGENTA}", sentence)
+        sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
+    if color == "BLUE":
+        sentence = re.sub("MATCH_START", f"{Fore.BLUE}", sentence)
+        sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
+    if color == "GREEN":
+        sentence = re.sub("MATCH_START", f"{Fore.GREEN}", sentence)
+        sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
+    if color == "RED":
+        sentence = re.sub("MATCH_START", f"{Fore.RED}", sentence)
+        sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
+    if color == "CYAN":
+        sentence = re.sub("MATCH_START", f"{Fore.CYAN}", sentence)
+        sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
+
+    return sentence
+
+
+def report(matches, i):
+    """Simple function that prints the index of the current match."""
+    print(f"Match {i+1} of {len(matches)}")
+    return matches[i]
+
 
 class Book:
     """"""
-    def __init__(self, title: str, filename: str):
+    def __init__(self, title: str, filename: str, padding: int=5,):
         """"""
         self.title = title
         self.filename = filename
+        self.padding = padding
 
         self.text = ""
         self.sents = []
@@ -68,7 +131,8 @@ class Book:
 
 
     def build_relation_set(self):
-        """"""
+        """Generates an uniquely keyed list of all relations in the specific book. 
+        Returns nothing, sets attributes."""
         char_rels = np.loadtxt("data/character_relation_annotations.txt",dtype='str', delimiter='\t')
         # 0:annotator	1:change	2:title	3:author	4:character_1	5:character_2	6:affinity	7:coarse_category	8:fine_category	9:detail
         char_rels = char_rels[np.where(char_rels[:,2] == self.title)]
@@ -87,24 +151,32 @@ class Book:
         self.character_relations = book_char_rels 
 
 
-
-    def passage_generator(self, rel_index: int=0, padding: int=5):
-        """"""
+    def passage_generator(self, rel_index: int=0, match_func: Callable[[str, str, list], bool]=smarter_match):
+        """Construct a generator object to generate possibly relevant passage for a given relation and book.
+        returns the generator object."""
         char1, rel, char2 = self.get_rel_from_index(rel_index)
-        
+
+        sel_titles_1 = get_titles_from_name(char1)
+        sel_titles_2 = get_titles_from_name(char2)
+
         matches = []
         for i, sent in enumerate(self.sents):
-            if loose_match(sent, char1):
-                matches.append((i, char1))
-            if loose_match(sent, char2):
-                matches.append((i, char2))
+            match_bool, anchored_string = match_func(sent, char1, sel_titles_1)
+            if match_bool:
+                matches.append((i, char1, anchored_string))
 
-        generator = ((match[0]-padding, find_next(char1, char2, matches, match)[0]+padding) for match in matches[:-1])
-        return generator
+            match_bool, anchored_string = match_func(sent, char2, sel_titles_2)
+            if match_bool:
+                matches.append((i, char2, anchored_string))
+        
+        matches = clean_matches(matches)
+
+        return ((report(matches, i), matches[i+1]) for i in range(len(matches)-1))
+
 
 
     def present_relations(self):
-        """"""
+        """Prints all relations in the current book with their unique keys."""
         output = ""
         i = 0
         for char1, rel in self.character_relations.items():
@@ -117,21 +189,42 @@ class Book:
 
 
     def get_rel_from_index(self, rel_index: str="0.0"):
-        """"""
+        """Given a unique key/index, returns the characters and the relation from the stringlike representation."""
         char1 = list(self.character_relations)[int(rel_index[0])]
         rel = self.character_relations[char1][int(rel_index[-1])][0]
         char2 = self.character_relations[char1][int(rel_index[-1])][1]
         return char1, rel, char2
 
 
-    def get_passage(self, sentence_range: tuple):
-        """"""
-        sent_index1 = sentence_range[0]
-        sent_index2 = sentence_range[1]
+    def get_passage(self, matches: tuple):
+        """Given a range of sentence numbers appends all of the specific sentences.
+        returns the appended sentences"""
+        
+        match1 = matches[0] 
+        match2 = matches[1]
 
-        if (sent_index1 < 0) or (sent_index2 >= len(self.sents)):
-            return ""
-        return ' '.join(self.sents[sent_index1:sent_index2])
+        total_sents = len(self.sents)
+
+
+        start_index = match1[0] - self.padding if match1[0] - self.padding >= 0 else 0
+        end_index = match2[0] + self.padding if match2[0] + self.padding < total_sents else total_sents
+        
+        sentences = self.sents[start_index:end_index]
+
+        idx1 = self.padding if match1[0] >= self.padding else 0
+        idx2 = -(self.padding) if match2[0] + self.padding <= total_sents else -1
+
+        # Edge case both matches in same sentence. Find first match, join sentences after first match.
+        if sentences[idx1] == sentences[idx2]:
+            i =  match1[2].find("MATCH_START")
+            s1 = color_names(match1[2], "MAGENTA")
+            s2 = color_names(match2[2], "GREEN") 
+            sentences[idx1] = ' '.join(s1.split(' ')[:(i+1)] + s2.split(' ')[(i+1):])
+        else:
+            sentences[idx1] = color_names(match1[2], "MAGENTA") 
+            sentences[idx2] = color_names(match2[2], "GREEN") 
+
+        return ' '.join(sentences)
 
 
     def __repr__(self):
@@ -142,10 +235,10 @@ class Book:
 
 
 def main():
-    book1 = Book("The American", "177-0.txt")
+    book1 = Book("Pride and Prejudice", "1342-0.txt")
     print(book1)
     book1.present_relations()
-    gen = book1.passage_generator("2.0")
+    gen = book1.passage_generator("3.1")
     print(book1.get_passage(next(gen)))
     
 if __name__ == "__main__":
