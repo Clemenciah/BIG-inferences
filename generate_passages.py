@@ -5,7 +5,7 @@ from typing import Callable
 import gender_guesser.detector as gender
 import re
 import os
-from colorama import Fore, Style
+from colorama import Fore, Style, Back
 from difflib import SequenceMatcher
 
 # male, female and androgynous list of titles. 
@@ -81,20 +81,20 @@ def color_names(sentence: str, color: str="MAGENTA"):
     """Replaces the anchor in a sentence with the specific values needed to color the name with {color}.
     returns the colored string
     """
-    if color == "MAGENTA":
-        sentence = re.sub("MATCH_START", f"{Fore.MAGENTA}", sentence)
+    if color == "MAGENTA": 
+        sentence = re.sub("MATCH_START", f"{Back.MAGENTA}", sentence)
         sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
     if color == "BLUE":
-        sentence = re.sub("MATCH_START", f"{Fore.BLUE}", sentence)
+        sentence = re.sub("MATCH_START", f"{Back.BLUE}", sentence)
         sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
     if color == "GREEN":
-        sentence = re.sub("MATCH_START", f"{Fore.GREEN}", sentence)
+        sentence = re.sub("MATCH_START", f"{Back.GREEN}", sentence)
         sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
     if color == "RED":
-        sentence = re.sub("MATCH_START", f"{Fore.RED}", sentence)
+        sentence = re.sub("MATCH_START", f"{Back.RED}", sentence)
         sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
     if color == "CYAN":
-        sentence = re.sub("MATCH_START", f"{Fore.CYAN}", sentence)
+        sentence = re.sub("MATCH_START", f"{Back.CYAN}", sentence)
         sentence = re.sub("MATCH_END", f"{Style.RESET_ALL}", sentence)
 
     return sentence
@@ -220,8 +220,8 @@ class Book:
             s2 = color_names(match2[2], "GREEN") 
             sentences[idx1] = ' '.join(s1.split(' ')[:(i+1)] + s2.split(' ')[(i+1):])
         else:
-            sentences[idx1] = color_names(match1[2], "MAGENTA") 
-            sentences[idx2] = color_names(match2[2], "GREEN") 
+            sentences[idx1] = color_names(match1[2], "MAGENTA", mark_background=mark_background) 
+            sentences[idx2] = color_names(match2[2], "GREEN", mark_background=mark_background) 
 
         return ' '.join(sentences)
 
