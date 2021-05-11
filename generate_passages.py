@@ -10,8 +10,8 @@ from difflib import SequenceMatcher
 
 # male, female and androgynous list of titles. 
 titles = {
-    "male": ["Mr.", "Dr.", "Drs.", "Jr.", "prof."],
-    "female": ["Ms.", "Miss", "Mrs.", "Dr.", "Drs.", "Jr.", "prof."],
+    "male": ["Mr.", "Dr.", "Drs.", "Jr.", "prof.", "Monsieur"],
+    "female": ["Ms.", "Miss", "Mrs.", "Dr.", "Drs.", "Jr.", "prof.", "Madame"],
     "andy": ["Mr.", "Ms.", "Miss", "Mrs.", "Dr.", "Drs.", "Jr.", "prof."]
 }
 
@@ -22,10 +22,10 @@ def get_titles_from_name(name: str):
     first_name = name.split(' ')[0]
     p_gender = d.get_gender(first_name)
 
-    if first_name == 'Mr.':
+    if first_name == 'Mr.' or first_name == "Monsieur":
         return titles["male"]
 
-    if first_name in ["Ms.", "Miss", "Mrs."]:
+    if first_name in ["Ms.", "Miss", "Mrs.", "Madame"]:
         return titles["female"]
 
     if p_gender in ["male", "female"]:
@@ -48,18 +48,18 @@ def smarter_match(sentence: str, name: str, s_titles: list):
         regex = f"{first_name}"
 
         if re.search(regex, sentence):
-            return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
+            return True, re.subn(regex, f"MATCH_START{regex}MATCH_END", sentence)[0]
 
         for i in range(len(name_list)):
             for title in s_titles:
                 regex = f"{title} {' '.join(name_list[-(i+1):])}"
                 if re.search(regex, sentence):
-                    return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
+                    return True, re.subn(regex, f"MATCH_START{regex}MATCH_END", sentence)[0]
     else: 
         for i in range(len(name_list)):
             regex = f"{' '.join(name_list[-(i+1):])}"
             if re.search(regex, sentence):
-                return True, re.sub(regex, f"MATCH_START{regex}MATCH_END", sentence)
+                return True, re.subn(regex, f"MATCH_START{regex}MATCH_END", sentence)[0]
 
     return False, ""
 
@@ -195,7 +195,6 @@ class Book:
         char2 = self.character_relations[char1][int(rel_index[-1])][1]
         return char1, rel, char2
 
-
     def get_passage(self, matches: tuple):
         """Given a range of sentence numbers appends all of the specific sentences.
         returns the appended sentences"""
@@ -210,7 +209,7 @@ class Book:
         sentences = self.sents[start_index:end_index]
 
         idx1 = self.padding if match1[0] >= self.padding else 0
-        idx2 = -(self.padding) if match2[0] + self.padding <= total_sents else -1
+        idx2 = -(self.padding) if match2[0] + self.padding <= total_sents else -1 
 
         # Edge case both matches in same sentence. Find first match, join sentences after first match. 
         # TODO: order of matches
@@ -220,8 +219,8 @@ class Book:
             s2 = color_names(match2[2], "GREEN") 
             sentences[idx1] = ' '.join(s1.split(' ')[:(i+1)] + s2.split(' ')[(i+1):])
         else:
-            sentences[idx1] = color_names(match1[2], "MAGENTA", mark_background=mark_background) 
-            sentences[idx2] = color_names(match2[2], "GREEN", mark_background=mark_background) 
+            sentences[idx1] = color_names(match1[2], "MAGENTA") 
+            sentences[idx2] = color_names(match2[2], "GREEN") 
 
         return ' '.join(sentences)
 
